@@ -21,14 +21,14 @@ hp = {
 cfg: LadderConfig = {
     "input_shape": (28, 28),
     "output_classes": 47,
-    "train_dataset": datasets.EMNIST("data/", train=True, download=True, split="balanced", transform=transforms.Compose([
+    "train_dataset": Subset(datasets.EMNIST("data/", train=True, download=True, split="bymerge", transform=transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307), (0.3081))
-    ])),
-    "test_dataset": datasets.EMNIST("data/", train=False, download=True, split="balanced", transform=transforms.Compose([
+    ])), indices=range(100)),
+    "test_dataset": Subset(datasets.EMNIST("data/", train=False, download=True, split="bymerge", transform=transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307), (0.3081))
-    ])),
+    ])), indices=range(100)),
     "epochs": 30,
     "optim": t.optim.Adam,
     "shuffle": True
