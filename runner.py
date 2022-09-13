@@ -33,10 +33,15 @@ class LadderConfig(TypedDict):
 
 
 class Metrics(TypedDict):
-    metrics_epoch_wide: t.Tensor
-    losses: t.Tensor
-    accuracies: t.Tensor
-    confusion_matrices: t.Tensor
+    train_metrics_epoch_wide: t.Tensor
+    train_losses: t.Tensor
+    train_accuracies: t.Tensor
+    train_confusion_matrices: t.Tensor
+
+    val_metrics_epoch_wide: t.Tensor
+    val_losses: t.Tensor
+    val_accuracies: t.Tensor
+    val_confusion_matrices: t.Tensor
 
 
 class Ladder:
@@ -89,10 +94,15 @@ class Ladder:
     def go(self):
         num_examples = len(cast(Sized, self.validation_dataloader.dataset))
 
-        losses = t.zeros((self.cfg["epochs"], 2), dtype=t.float64, device=self.device)
-        accuracies = t.zeros((self.cfg["epochs"], 2), dtype=t.float64, device=self.device)
-        metrics_epoch_wide = t.zeros((self.cfg["epochs"], 2, num_examples, 3), dtype=t.float64, device=self.device)
-        confusion_matrices = t.zeros((self.cfg["epochs"], 2, self.cfg["output_classes"], self.cfg["output_classes"]), dtype=t.int64, device=self.device)
+        train_losses = t.zeros((self.cfg["epochs"]), dtype=t.float64, device=self.device)
+        train_accuracies = t.zeros((self.cfg["epochs"],), dtype=t.float64, device=self.device)
+        train_metrics_epoch_wide = t.zeros((self.cfg["epochs"], num_examples, 3), dtype=t.float64, device=self.device)
+        train_confusion_matrices = t.zeros((self.cfg["epochs"], self.cfg["output_classes"], self.cfg["output_classes"]), dtype=t.int64, device=self.device)
+
+        val_losses = t.zeros((self.cfg["epochs"]), dtype=t.float64, device=self.device)
+        val_accuracies = t.zeros((self.cfg["epochs"],), dtype=t.float64, device=self.device)
+        val_metrics_epoch_wide = t.zeros((self.cfg["epochs"], num_examples, 3), dtype=t.float64, device=self.device)
+        val_confusion_matrices = t.zeros((self.cfg["epochs"], self.cfg["output_classes"], self.cfg["output_classes"]), dtype=t.int64, device=self.device)
 
         for epoch in range(self.cfg["epochs"]):
             start_time = time.perf_counter()
@@ -100,15 +110,15 @@ class Ladder:
 
             val_loss, val_accuracy, val_metrics, val_confusion_matrix = self.one_epoch(True, epoch)
 
-            losses[epoch][0] = train_loss
-            accuracies[epoch][0] = train_accuracy
-            metrics_epoch_wide[epoch][0] = train_metrics
-            confusion_matrices[epoch][0] = train_confusion_matrix
+            train_losses[epoch] = train_loss
+            train_accuracies[epoch] = train_accuracy
+            train_metrics_epoch_wide[epoch] = train_metrics
+            train_confusion_matrices[epoch] = train_confusion_matrix
 
-            losses[epoch][1] = val_loss
-            accuracies[epoch][1] = val_accuracy
-            metrics_epoch_wide[epoch][1] = val_metrics
-            confusion_matrices[epoch][1] = val_confusion_matrix
+            val_losses[epoch] = val_loss
+            val_accuracies[epoch] = val_accuracy
+            val_metrics_epoch_wide[epoch] = val_metrics
+            val_confusion_matrices[epoch] = val_confusion_matrix
 
             end_time = time.perf_counter()
             print("process took {:.2f} secs to complete".format(end_time - start_time))
@@ -117,10 +127,11 @@ class Ladder:
 
             self.model.save("./models/{}/epoch_{}.model".format(self.name, epoch))
 
-            theMetrics = Metrics(metrics_epoch_wide=val_metrics, losses=losses, accuracies=accuracies, confusion_matrices=confusion_matrices)
+            theMetrics = Metrics(val_metrics_epoch_wide=val_metrics_epoch_wide, val_losses=val_losses, val_accuracies=val_accuracies, val_confusion_matrices=val_confusion_matrices,
+                                 train_metrics_epoch_wide=train_metrics_epoch_wide, train_losses=train_losses, train_accuracies=train_accuracies, train_confusion_matrices=train_confusion_matrices)
             pickle.dump(theMetrics, open("./models/{}/all_epochs.metrics".format(self.name, epoch), "wb"))
 
-        return losses, accuracies, metrics_epoch_wide, confusion_matrices
+        return val_losses, val_accuracies, val_metrics_epoch_wide, val_confusion_matrices
 
     def ladder_weight(self, epoch: int):
         return (10 ** self.hp["ladder_loss_saturation"]) * t.sigmoid(

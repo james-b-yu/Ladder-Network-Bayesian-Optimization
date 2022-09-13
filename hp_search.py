@@ -32,7 +32,7 @@ def model(hp: Dict[str, float]):
 
     a = Ladder(cfg, cast(LadderHP, hp))
     totalLoss, totalAccuracy, _1, _2 = a.go()
-    return totalAccuracy[1].max()
+    return totalAccuracy.max()
 
 
 hp_in = {
