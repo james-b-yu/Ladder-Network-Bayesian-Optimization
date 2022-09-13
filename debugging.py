@@ -2,9 +2,9 @@
 import glob
 import os
 from typing import Dict, cast
-from app import AutoEncoder, AutoEncoderConfig, AutoEncoderHyperParameters
+from runner import Ladder, LadderConfig, LadderHP
 import torch as t
-from model import AutoEncoderModel
+from model import LadderModel
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset, DataLoader, Subset
 from hp_tuning import BayesOpt
@@ -29,7 +29,8 @@ train_y = training_dataset.train_labels[training_subset.indices]  # type: ignore
 for l in range(47):
     print("count {}: {}".format(training_dataset.classes[l], (train_y == l).sum()))
 
-models = glob.glob("./models/*.p")
+models = glob.glob("./models/*_regression_model.p")
 lastest_model = max(models, key=os.path.getctime)
 theModel = gaussian_regression.model.load(open(lastest_model, "rb"))
 print(theModel.y)
+print(theModel.X)

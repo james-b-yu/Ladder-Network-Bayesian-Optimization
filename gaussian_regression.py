@@ -33,7 +33,7 @@ def find_priors(X: t.Tensor, y: t.Tensor, epochs=100, device=t.device("cpu")):
         return loss
 
     for i in range(epochs):
-        optim.step(closure)
+        optim.step(closure)  # type: ignore
 
     return m.detach(), s.detach(), v.detach(), l.detach()
 

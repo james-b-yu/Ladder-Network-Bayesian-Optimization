@@ -8,13 +8,13 @@ import torch.utils.data
 DEFAULT_STD = 0.1
 
 
-class AutoEncoderFModule(nn.Module):
+class LadderFModule(nn.Module):
     def __init__(self):
         super().__init__()
         self.corruption_std = DEFAULT_STD  # to be overwritten when calling module.apply on the parent module
 
 
-class AutoEncoderFConvBlock(AutoEncoderFModule):
+class LadderFConvBlock(LadderFModule):
     def __init__(self, in_channels: int, out_channels: int):
         super().__init__()
         self.dummy_param = nn.Parameter(t.empty(0))  # for finding the device
@@ -37,7 +37,7 @@ class AutoEncoderFConvBlock(AutoEncoderFModule):
         return out
 
 
-class AutoEncoderFlatternBlock(AutoEncoderFModule):
+class LadderFlatternBlock(LadderFModule):
     def __init__(self):
         super().__init__()
         self.dummy_param = nn.Parameter(t.empty(0))  # for finding the device
@@ -52,7 +52,7 @@ class AutoEncoderFlatternBlock(AutoEncoderFModule):
         return out
 
 
-class AutoEncoderDeepFLayer(AutoEncoderFModule):
+class LadderDeepFLayer(LadderFModule):
     def __init__(self, in_features: int, out_features: int, nonlinearity: bool):
         super().__init__()
         self.dummy_param = nn.Parameter(t.empty(0))  # for finding the device
@@ -76,7 +76,7 @@ class AutoEncoderDeepFLayer(AutoEncoderFModule):
         return out
 
 
-class AutoEncoderDeepBLayer(nn.Module):
+class LadderDeepBLayer(nn.Module):
     def __init__(self, in_features: int, out_features: int):
         super().__init__()
         self.dummy_param = nn.Parameter(t.empty(0))  # for finding the device
@@ -103,7 +103,7 @@ class AutoEncoderDeepBLayer(nn.Module):
         return out
 
 
-class AutoEncoderBConvBlock(nn.Module):
+class LadderBConvBlock(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, in_features: tuple[int, int], out_features: tuple[int, int]):
         super().__init__()
         self.dummy_param = nn.Parameter(t.empty(0))  # for finding the device
@@ -131,7 +131,7 @@ class AutoEncoderBConvBlock(nn.Module):
         return out
 
 
-class AutoEncoderModel(nn.Module):
+class LadderModel(nn.Module):
     def __init__(self, input_shape: tuple[int, int], output_classes: int):
         super().__init__()
         self.corruption_std = DEFAULT_STD
@@ -140,9 +140,9 @@ class AutoEncoderModel(nn.Module):
 
         self.tail = nn.BatchNorm2d(num_features=1)  # batch_norm
 
-        conv_backbone_encoder_arr = [AutoEncoderFConvBlock(in_channels=1, out_channels=4),
-                                     AutoEncoderFConvBlock(in_channels=4, out_channels=8),
-                                     AutoEncoderFConvBlock(in_channels=8, out_channels=16)]
+        conv_backbone_encoder_arr = [LadderFConvBlock(in_channels=1, out_channels=4),
+                                     LadderFConvBlock(in_channels=4, out_channels=8),
+                                     LadderFConvBlock(in_channels=8, out_channels=16)]
 
         self.conv_backbone_encoder = nn.ModuleList(conv_backbone_encoder_arr)
         test_input = t.rand(input_shape).unsqueeze(0).unsqueeze(0)
@@ -150,7 +150,7 @@ class AutoEncoderModel(nn.Module):
         self.conv_backbone_encoder_output_shape: t.Size = t.Size((-1, *test_conv_backbone(self.tail(test_input)).shape[1:]))
         self.conv_backbone_encoder_output_size: int = test_conv_backbone(self.tail(test_input)).flatten(start_dim=1).size(1)
 
-        deep_backbone_encoder_arr = [AutoEncoderDeepFLayer(self.conv_backbone_encoder_output_size, 128, True), AutoEncoderDeepFLayer(128, output_classes, False)]
+        deep_backbone_encoder_arr = [LadderDeepFLayer(self.conv_backbone_encoder_output_size, 128, True), LadderDeepFLayer(128, output_classes, False)]
 
         self.deep_backbone_encoder = nn.ModuleList(deep_backbone_encoder_arr)
 
@@ -164,8 +164,8 @@ class AutoEncoderModel(nn.Module):
 
         num_features.reverse()
 
-        self.conv_backbone_decoder = nn.ModuleList([AutoEncoderBConvBlock(conv.out_channels, conv.in_channels, num_features[index], num_features[index + 1]) for index, conv in enumerate(reversed(conv_backbone_encoder_arr))])
-        self.deep_backbone_decoder = nn.ModuleList([AutoEncoderDeepBLayer(deep.out_features, deep.in_features) for deep in reversed(deep_backbone_encoder_arr)])
+        self.conv_backbone_decoder = nn.ModuleList([LadderBConvBlock(conv.out_channels, conv.in_channels, num_features[index], num_features[index + 1]) for index, conv in enumerate(reversed(conv_backbone_encoder_arr))])
+        self.deep_backbone_decoder = nn.ModuleList([LadderDeepBLayer(deep.out_features, deep.in_features) for deep in reversed(deep_backbone_encoder_arr)])
 
     def forward(self, x) -> tuple[list[t.Tensor], list[t.Tensor]]:
 
@@ -216,3 +216,13 @@ class AutoEncoderModel(nn.Module):
         ladder_up[bridge_index] = ladder_up[bridge_index].reshape(self.conv_backbone_encoder_output_shape)
 
         return ladder_up, ladder_down
+
+    def save(self, path):
+        t.save(self.state_dict(), path)
+
+    @classmethod
+    def load(cls, input_shape: tuple[int, int], output_classes: int, path, device=t.device("cpu")):
+        model = LadderModel(input_shape, output_classes)
+        model.load_state_dict(t.load(path, map_location=device))
+
+        return model

@@ -4,9 +4,9 @@ import pickle
 import time
 from typing import Callable, Dict, cast
 import torch as t
-from app import AutoEncoder, AutoEncoderConfig
+from runner import Ladder, LadderConfig
 import gaussian_regression as gr
-from model import AutoEncoderModel
+from model import LadderModel
 import gaussian_regression
 import logging
 import scipy.optimize
