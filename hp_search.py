@@ -17,14 +17,14 @@ def model(hp: Dict[str, float]):
     cfg: LadderConfig = {
         "input_shape": (28, 28),
         "output_classes": 47,
-        "train_dataset": Subset(datasets.EMNIST("data/", train=True, download=True, split="balanced", transform=transforms.Compose([
+        "train_dataset": datasets.EMNIST("data/", train=True, download=True, split="balanced", transform=transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.1307), (0.3081))
-        ])), range(train_subset_size)),
-        "test_dataset": Subset(datasets.EMNIST("data/", train=True, download=True, split="balanced", transform=transforms.Compose([
+        ])),
+        "test_dataset": datasets.EMNIST("data/", train=True, download=True, split="balanced", transform=transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.1307), (0.3081))
-        ])), range(train_subset_size, train_subset_size + test_subset_size)),
+        ])),
         "epochs": 30,
         "optim": t.optim.Adam,
         "shuffle": True
@@ -32,7 +32,7 @@ def model(hp: Dict[str, float]):
 
     a = Ladder(cfg, cast(LadderHP, hp))
     totalLoss, totalAccuracy, _1, _2 = a.go()
-    return totalAccuracy.max()
+    return totalAccuracy[1].max()
 
 
 hp_in = {

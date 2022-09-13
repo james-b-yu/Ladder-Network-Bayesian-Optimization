@@ -87,22 +87,28 @@ class Ladder:
         self.init_dataloaders()
 
     def go(self):
-        losses, accuracies = t.zeros(
-            self.cfg["epochs"], dtype=t.float64, device=self.device
-        ), t.zeros(self.cfg["epochs"], dtype=t.float64, device=self.device)
-
         num_examples = len(cast(Sized, self.validation_dataloader.dataset))
-        metrics_epoch_wide = t.zeros((self.cfg["epochs"], num_examples, 3), dtype=t.float64, device=self.device)
-        confusion_matrices = t.zeros((self.cfg["epochs"], self.cfg["output_classes"], self.cfg["output_classes"]), dtype=t.int64, device=self.device)
+
+        losses = t.zeros((self.cfg["epochs"], 2), dtype=t.float64, device=self.device)
+        accuracies = t.zeros((self.cfg["epochs"], 2), dtype=t.float64, device=self.device)
+        metrics_epoch_wide = t.zeros((self.cfg["epochs"], 2, num_examples, 3), dtype=t.float64, device=self.device)
+        confusion_matrices = t.zeros((self.cfg["epochs"], 2, self.cfg["output_classes"], self.cfg["output_classes"]), dtype=t.int64, device=self.device)
 
         for epoch in range(self.cfg["epochs"]):
             start_time = time.perf_counter()
-            self.one_epoch(False, epoch)
-            loss, accuracy, metrics, confusion_matrix = self.one_epoch(True, epoch)
-            losses[epoch] = loss
-            accuracies[epoch] = accuracy
-            metrics_epoch_wide[epoch] = metrics
-            confusion_matrices[epoch] = confusion_matrix
+            train_loss, train_accuracy, train_metrics, train_confusion_matrix = self.one_epoch(False, epoch)
+
+            val_loss, val_accuracy, val_metrics, val_confusion_matrix = self.one_epoch(True, epoch)
+
+            losses[epoch][0] = train_loss
+            accuracies[epoch][0] = train_accuracy
+            metrics_epoch_wide[epoch][0] = train_metrics
+            confusion_matrices[epoch][0] = train_confusion_matrix
+
+            losses[epoch][1] = val_loss
+            accuracies[epoch][1] = val_accuracy
+            metrics_epoch_wide[epoch][1] = val_metrics
+            confusion_matrices[epoch][1] = val_confusion_matrix
 
             end_time = time.perf_counter()
             print("process took {:.2f} secs to complete".format(end_time - start_time))
@@ -111,8 +117,8 @@ class Ladder:
 
             self.model.save("./models/{}/epoch_{}.model".format(self.name, epoch))
 
-            theMetrics = Metrics(metrics_epoch_wide=metrics, losses=losses, accuracies=accuracies, confusion_matrices=confusion_matrices)
-            pickle.dump(theMetrics, open("./models/{}/epoch_{}.metrics".format(self.name, epoch), "wb"))
+            theMetrics = Metrics(metrics_epoch_wide=val_metrics, losses=losses, accuracies=accuracies, confusion_matrices=confusion_matrices)
+            pickle.dump(theMetrics, open("./models/{}/all_epochs.metrics".format(self.name, epoch), "wb"))
 
         return losses, accuracies, metrics_epoch_wide, confusion_matrices
 
