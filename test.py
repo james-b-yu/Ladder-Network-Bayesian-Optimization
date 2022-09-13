@@ -18,11 +18,11 @@ def model(hp: Dict[str, float]):
         "input_shape": (28, 28),
         "output_classes": 47,
         "model": AutoEncoderModel,
-        "train_dataset": Subset(datasets.EMNIST("data/", train=True, split="balanced", download=True, transform=transforms.Compose([
+        "train_dataset": Subset(datasets.MNIST("data/", train=True, download=True, transform=transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.1307), (0.3081))
         ])), range(train_subset_size)),
-        "test_dataset": Subset(datasets.EMNIST("data/", train=True, split="balanced", download=True, transform=transforms.Compose([
+        "test_dataset": Subset(datasets.MNIST("data/", train=True, download=True, transform=transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.1307), (0.3081))
         ])), range(train_subset_size, train_subset_size + test_subset_size)),
