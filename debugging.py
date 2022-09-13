@@ -7,7 +7,7 @@ import torch as t
 from model import LadderModel
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset, DataLoader, Subset
-from hp_tuning import BayesOpt
+from bayes_opt import BayesOpt
 import gaussian_regression
 
 from matplotlib import pyplot as plt
