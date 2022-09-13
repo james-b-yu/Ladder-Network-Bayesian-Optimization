@@ -92,16 +92,17 @@ class Ladder:
         self.init_dataloaders()
 
     def go(self):
-        num_examples = len(cast(Sized, self.validation_dataloader.dataset))
+        num_train_examples = len(cast(Sized, self.train_dataloader.dataset))
+        num_val_examples = len(cast(Sized, self.validation_dataloader.dataset))
 
         train_losses = t.zeros((self.cfg["epochs"]), dtype=t.float64, device=self.device)
         train_accuracies = t.zeros((self.cfg["epochs"],), dtype=t.float64, device=self.device)
-        train_metrics_epoch_wide = t.zeros((self.cfg["epochs"], num_examples, 3), dtype=t.float64, device=self.device)
+        train_metrics_epoch_wide = t.zeros((self.cfg["epochs"], num_train_examples, 3), dtype=t.float64, device=self.device)
         train_confusion_matrices = t.zeros((self.cfg["epochs"], self.cfg["output_classes"], self.cfg["output_classes"]), dtype=t.int64, device=self.device)
 
         val_losses = t.zeros((self.cfg["epochs"]), dtype=t.float64, device=self.device)
         val_accuracies = t.zeros((self.cfg["epochs"],), dtype=t.float64, device=self.device)
-        val_metrics_epoch_wide = t.zeros((self.cfg["epochs"], num_examples, 3), dtype=t.float64, device=self.device)
+        val_metrics_epoch_wide = t.zeros((self.cfg["epochs"], num_val_examples, 3), dtype=t.float64, device=self.device)
         val_confusion_matrices = t.zeros((self.cfg["epochs"], self.cfg["output_classes"], self.cfg["output_classes"]), dtype=t.int64, device=self.device)
 
         for epoch in range(self.cfg["epochs"]):
