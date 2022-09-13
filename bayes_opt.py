@@ -1,5 +1,6 @@
 from importlib.metadata import distribution
 from operator import index
+import os
 import pickle
 import time
 from typing import Callable, Dict, cast
@@ -96,7 +97,8 @@ class BayesOpt:
         logging.info("found priors\tmean: {}\tnoise: {}\tv: {}\tl: {}".format(priors[0].item(), priors[1].item(), priors[2].item(), priors[3].item()))
         # return the model
         res = gaussian_regression.model(self.X, self.y, *priors)
-        # pickle.dump(res, open("./models/{}.p".format(int(time.time())), "wb"))
+
+        os.makedirs("./models/{}".format(self.name), exist_ok=True)
         res.dump(open("./models/{}_regression_model.p".format(self.name), "wb"))
         return res
 
@@ -152,6 +154,7 @@ class BayesOpt:
         y = self.calculate_y(x)
         self.y = t.concat([self.y, y.unsqueeze(0)])
 
+        os.makedirs("./models/{}".format(self.name), exist_ok=True)
         self.dump(open("./models/{}.p".format(self.name), "wb"))
 
     def find_hyperparameters(self, epochs=100):

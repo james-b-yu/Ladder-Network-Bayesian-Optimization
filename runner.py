@@ -1,3 +1,4 @@
+import os
 from time import time
 from typing import NamedTuple, Any, Sized, TypedDict, cast
 import torch as t
@@ -105,6 +106,8 @@ class Ladder:
 
             end_time = time.perf_counter()
             print("process took {:.2f} secs to complete".format(end_time - start_time))
+
+            os.makedirs("./models/{}".format(self.name), exist_ok=True)
 
             self.model.save("./models/{}/epoch_{}.model".format(self.name, epoch))
 
