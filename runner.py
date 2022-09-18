@@ -1,5 +1,6 @@
 import os
 from time import time
+from turtle import back
 from typing import NamedTuple, Any, Sized, TypedDict, cast
 import torch as t
 import torch.nn as nn
@@ -8,6 +9,7 @@ from torch.utils.data import Dataset, DataLoader, Subset
 import time
 from model import LadderFModule, LadderModel
 import pickle
+from torch import backends
 
 
 class LadderHP(TypedDict):
@@ -58,7 +60,14 @@ class Ladder:
         )
 
     def init_device(self):
-        self.device = t.device("cpu")
+        self.dtype = t.float32
+
+        if backends.mps.is_available():  # type: ignore
+            self.device = t.device("mps")
+        elif backends.cuda.is_available():  # type: ignore
+            self.device = t.device("cuda")
+        else:
+            self.device = t.device("cpu")
 
     def init_model_hps(self, m: nn.Module):
         if isinstance(m, LadderFModule) or isinstance(m, LadderModel):
@@ -95,14 +104,14 @@ class Ladder:
         num_train_examples = len(cast(Sized, self.train_dataloader.dataset))
         num_val_examples = len(cast(Sized, self.validation_dataloader.dataset))
 
-        train_losses = t.zeros((self.cfg["epochs"]), dtype=t.float64, device=self.device)
-        train_accuracies = t.zeros((self.cfg["epochs"],), dtype=t.float64, device=self.device)
-        train_metrics_epoch_wide = t.zeros((self.cfg["epochs"], num_train_examples, 3), dtype=t.float64, device=self.device)
+        train_losses = t.zeros((self.cfg["epochs"]), dtype=self.dtype, device=self.device)
+        train_accuracies = t.zeros((self.cfg["epochs"],), dtype=self.dtype, device=self.device)
+        train_metrics_epoch_wide = t.zeros((self.cfg["epochs"], num_train_examples, 3), dtype=self.dtype, device=self.device)
         train_confusion_matrices = t.zeros((self.cfg["epochs"], self.cfg["output_classes"], self.cfg["output_classes"]), dtype=t.int64, device=self.device)
 
-        val_losses = t.zeros((self.cfg["epochs"]), dtype=t.float64, device=self.device)
-        val_accuracies = t.zeros((self.cfg["epochs"],), dtype=t.float64, device=self.device)
-        val_metrics_epoch_wide = t.zeros((self.cfg["epochs"], num_val_examples, 3), dtype=t.float64, device=self.device)
+        val_losses = t.zeros((self.cfg["epochs"]), dtype=self.dtype, device=self.device)
+        val_accuracies = t.zeros((self.cfg["epochs"],), dtype=self.dtype, device=self.device)
+        val_metrics_epoch_wide = t.zeros((self.cfg["epochs"], num_val_examples, 3), dtype=self.dtype, device=self.device)
         val_confusion_matrices = t.zeros((self.cfg["epochs"], self.cfg["output_classes"], self.cfg["output_classes"]), dtype=t.int64, device=self.device)
 
         for epoch in range(self.cfg["epochs"]):
@@ -186,7 +195,7 @@ class Ladder:
 
             with t.no_grad():
                 # calculate statistics
-                totalLoss += mean_logit_loss.to("cpu") / num_examples
+                totalLoss += mean_logit_loss / num_examples
                 batch_start = cast(int, dl.batch_size) * index
                 batch_end = batch_start + y.size(0)
 
